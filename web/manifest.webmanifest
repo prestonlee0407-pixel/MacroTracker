@@ -1,0 +1,23 @@
+{
+  "name": "Calorie Tracker",
+  "short_name": "Calories",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f5f6fb",
+  "theme_color": "#1f2a44",
+  "description": "Offline-ready calorie and macro tracker powered by Pyodide.",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

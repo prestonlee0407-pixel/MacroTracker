@@ -1,0 +1,337 @@
+:root {
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #1f2a44;
+  background-color: #f5f6fb;
+  line-height: 1.5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(circle at top left, #fdfbff, #eef2ff 45%, #e6f7ff 80%);
+}
+
+.app-shell {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2.5rem 1.25rem 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: clamp(2rem, 3vw, 2.75rem);
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: 0.8rem;
+  margin: 0 0 0.35rem;
+  color: #7a809c;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+}
+
+.primary-btn {
+  background: linear-gradient(135deg, #4caf50, #2f9bce);
+  color: #fff;
+  border: none;
+}
+
+.primary-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ghost-btn {
+  background: transparent;
+  border: 1px solid rgba(31, 42, 68, 0.25);
+  color: inherit;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.stat-card {
+  background: #fff;
+  border-radius: 1.25rem;
+  padding: 1.2rem;
+  box-shadow: 0 15px 40px rgba(31, 42, 68, 0.08);
+  border: 1px solid rgba(33, 45, 71, 0.05);
+}
+
+.stat-card h3 {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+  color: #6d7594;
+}
+
+.stat-card p {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+.panel {
+  background: #fff;
+  border-radius: 1.5rem;
+  padding: 1.5rem;
+  box-shadow: 0 35px 60px rgba(15, 22, 43, 0.08);
+  border: 1px solid rgba(33, 45, 71, 0.08);
+}
+
+.panel header h2 {
+  margin: 0 0 0.3rem;
+}
+
+.panel header p {
+  margin: 0;
+  color: #6c7394;
+}
+
+.field-row {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1rem;
+  gap: 0.4rem;
+}
+
+.field-row.split {
+  align-items: flex-start;
+}
+
+.field-row label {
+  font-weight: 600;
+}
+
+.field-row input,
+.field-row select {
+  border-radius: 0.75rem;
+  border: 1px solid rgba(31, 42, 68, 0.25);
+  padding: 0.65rem 0.9rem;
+  width: 100%;
+}
+
+.input-with-select {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.input-with-select select {
+  width: 110px;
+}
+
+.adjuster {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.4rem;
+  width: 100%;
+}
+
+.adjuster button {
+  border-radius: 0.9rem;
+  border: 1px solid rgba(31, 42, 68, 0.15);
+}
+
+.adjuster input {
+  text-align: center;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.section-actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.entry-list,
+.item-list {
+  margin-top: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.placeholder {
+  color: #95a0c3;
+  font-style: italic;
+}
+
+.entry-card,
+.item-card {
+  border: 1px solid rgba(31, 42, 68, 0.1);
+  border-radius: 1rem;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: #fbfcff;
+}
+
+.entry-card header,
+.item-card header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.entry-card header h3,
+.item-card header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.entry-card footer {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.5rem;
+}
+
+.entry-card footer span {
+  font-size: 0.9rem;
+  color: #6d7594;
+}
+
+.item-card footer {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  color: #6d7594;
+  font-size: 0.9rem;
+}
+
+.item-card img {
+  width: 100%;
+  border-radius: 0.8rem;
+  border: 1px solid rgba(31, 42, 68, 0.08);
+}
+
+.dialog-card {
+  min-width: min(90vw, 480px);
+  background: #ffffff;
+  border-radius: 1.25rem;
+  border: none;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.dialog-card header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dialog-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-weight: 600;
+}
+
+.dialog-card input,
+.dialog-card select {
+  border-radius: 0.75rem;
+  border: 1px solid rgba(31, 42, 68, 0.2);
+  padding: 0.65rem 0.9rem;
+}
+
+.dialog-card menu {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+}
+
+.file-picker input {
+  padding: 0.4rem;
+}
+
+.image-preview {
+  margin: 0;
+  text-align: center;
+}
+
+.image-preview img {
+  max-height: 200px;
+  width: auto;
+  border-radius: 0.8rem;
+  border: 1px solid rgba(31, 42, 68, 0.1);
+}
+
+#toast {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.85rem 1.2rem;
+  border-radius: 999px;
+  background: rgba(31, 42, 68, 0.9);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 20px 45px rgba(5, 9, 20, 0.35);
+}
+
+@media (max-width: 720px) {
+  .app-shell {
+    padding-top: 1.5rem;
+  }
+
+  .panel {
+    padding: 1.25rem;
+  }
+
+  .stats {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
