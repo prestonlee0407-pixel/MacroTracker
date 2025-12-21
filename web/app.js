@@ -745,8 +745,11 @@ async function runLabelOcr(file) {
     toastEl.textContent = 'Scanning label…';
     toastEl.hidden = false;
     const { data } = await window.Tesseract.recognize(file, 'eng', {
-      workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js',
-      corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.0.4/tesseract-core.wasm.js'
+      logger: (m) => {
+        if (m.status === 'recognizing text' && m.progress) {
+          toastEl.textContent = `Scanning label… ${Math.round(m.progress * 100)}%`;
+        }
+      }
     });
     const parsed = parseLabelText(data?.text || '');
     autoFillItemForm(parsed);
