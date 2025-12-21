@@ -49,7 +49,6 @@ async function init() {
   setupDialogs();
   setupActions();
   pyodideReady = bootstrapPyodide();
-  bootstrapOcr();
   await loadSettings();
   renderSettingsForm();
   await pyodideReady;
@@ -519,21 +518,7 @@ async function bootstrapPyodide() {
 }
 
 function bootstrapOcr() {
-  if (!window.Tesseract) return;
-  ocrWorkerReady = (async () => {
-    const worker = await window.Tesseract.createWorker({
-      workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js',
-      corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.0.4/tesseract-core.wasm.js'
-    });
-    await worker.loadLanguage('eng');
-    await worker.initialize('eng');
-    ocrWorker = worker;
-    return worker;
-  })().catch((err) => {
-    console.warn('OCR init failed', err);
-    ocrWorkerReady = null;
-    return null;
-  });
+  // No-op: simplified OCR uses Tesseract.recognize directly.
 }
 
 function openDatabase() {
@@ -752,15 +737,17 @@ async function registerServiceWorker() {
 }
 
 async function runLabelOcr(file) {
-  const worker = (await (ocrWorkerReady || Promise.resolve(null))) || null;
-  if (!worker) {
+  if (!window.Tesseract) {
     showToast('OCR not ready. Try again in a moment.');
     return;
   }
   try {
     toastEl.textContent = 'Scanning label…';
     toastEl.hidden = false;
-    const { data } = await worker.recognize(file);
+    const { data } = await window.Tesseract.recognize(file, 'eng', {
+      workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js',
+      corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.0.4/tesseract-core.wasm.js'
+    });
     const parsed = parseLabelText(data?.text || '');
     autoFillItemForm(parsed);
     showToast('Label scanned');
