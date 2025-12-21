@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#1f2a44" />
-    <title>Macro Tracker v5</title>
+    <title>Macro Tracker v6</title>
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="icons/icon-192.png" sizes="192x192" />
     <link rel="apple-touch-icon" href="icons/icon-192.png" />
@@ -18,7 +18,7 @@
       <header class="app-header">
         <div>
           <p class="eyebrow">Personal nutrition cockpit</p>
-          <h1>Macro Tracker v5</h1>
+          <h1>Macro Tracker v6</h1>
         </div>
         <div class="header-actions">
           <button id="toggle-settings" class="ghost-btn" aria-expanded="true">Hide settings</button>
@@ -136,7 +136,15 @@
         <div class="field-column">
           <label>Item name<input type="text" name="name" required /></label>
           <label>Serving mass (grams)<input type="number" name="base_grams" min="1" step="0.1" required /></label>
-          <label>Calories per serving<input type="number" name="calories" min="0" step="1" required /></label>
+          <label>Energy per serving
+            <div class="input-with-select">
+              <input type="number" name="calories" min="0" step="1" required />
+              <select name="energy_unit">
+                <option value="kcal" selected>kcal</option>
+                <option value="kj">kJ</option>
+              </select>
+            </div>
+          </label>
           <label>Protein (g)<input type="number" name="protein" min="0" step="0.1" /></label>
           <label>Fat (g)<input type="number" name="fat" min="0" step="0.1" /></label>
           <label>Carbs (g)<input type="number" name="carbs" min="0" step="0.1" /></label>

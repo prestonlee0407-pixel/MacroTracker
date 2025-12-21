@@ -125,6 +125,10 @@ function setupDialogs() {
       acc[key] = toNumber(formData.get(key));
       return acc;
     }, {});
+    const energyUnit = formData.get('energy_unit') || 'kcal';
+    if (energyUnit === 'kj') {
+      macros.calories = macros.calories / 4.184;
+    }
 
     let imageData = itemForm.dataset.imageData || null;
     const imageFile = formData.get('image');
@@ -286,6 +290,7 @@ async function openItemDialog(item, options = {}) {
     itemForm.name.value = item.name;
     itemForm.base_grams.value = item.base_grams;
     itemForm.calories.value = item.macros.calories;
+    itemForm.energy_unit.value = 'kcal';
     itemForm.protein.value = item.macros.protein;
     itemForm.fat.value = item.macros.fat;
     itemForm.carbs.value = item.macros.carbs;
