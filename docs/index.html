@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#1f2a44" />
+    <title>Calorie Tracker</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icons/icon-192.png" sizes="192x192" />
+    <link rel="apple-touch-icon" href="icons/icon-192.png" />
+    <link rel="stylesheet" href="styles.css" />
+    <script defer src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+    <script defer type="module" src="app.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-header">
+        <div>
+          <p class="eyebrow">Personal nutrition cockpit</p>
+          <h1>Calorie Tracker</h1>
+        </div>
+        <div class="header-actions">
+          <button id="toggle-settings" class="ghost-btn" aria-expanded="true">Hide settings</button>
+          <button id="install-btn" class="primary-btn" hidden>Install</button>
+        </div>
+      </header>
+
+      <section class="stats" id="stats-cards" aria-live="polite">
+        <!-- cards injected by JS -->
+      </section>
+
+      <section class="panel" id="settings-panel">
+        <header>
+          <h2>Daily targets</h2>
+          <p>Adjust these inputs and the Python logic recalculates new goals instantly.</p>
+        </header>
+        <form id="settings-form">
+          <div class="field-row">
+            <label for="body-weight">Body weight</label>
+            <div class="input-with-select">
+              <input type="number" step="0.1" id="body-weight" name="body_weight" placeholder="0" />
+              <select id="weight-unit" name="weight_unit">
+                <option value="lbs">lbs</option>
+                <option value="kg">kg</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <label for="maintenance-calories">Maintenance calories</label>
+            <input type="number" id="maintenance-calories" name="maintenance_calories" placeholder="0" />
+          </div>
+
+          <div class="field-row split">
+            <label for="caloric-adjustment">Caloric adjustment</label>
+            <div class="adjuster">
+              <button type="button" data-adjust="-50">–50</button>
+              <input type="number" id="caloric-adjustment" name="caloric_adjustment" value="0" />
+              <button type="button" data-adjust="50">+50</button>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <label for="macro-unit">Macro ratio unit</label>
+            <select id="macro-unit" name="macro_ratio_unit">
+              <option value="kg">per kg</option>
+              <option value="lbs">per lb</option>
+            </select>
+          </div>
+
+          <div class="field-row">
+            <label for="protein-ratio">Protein grams / unit</label>
+            <input type="number" step="0.1" id="protein-ratio" name="protein_per_unit" value="1.8" />
+          </div>
+
+          <div class="field-row">
+            <label for="fat-ratio">Fat grams / unit</label>
+            <input type="number" step="0.1" id="fat-ratio" name="fat_per_unit" value="0.6" />
+          </div>
+
+          <div class="field-row">
+            <label for="fiber-goal">Fiber goal (g)</label>
+            <input type="number" step="1" id="fiber-goal" name="fiber_goal" value="25" />
+          </div>
+        </form>
+      </section>
+
+      <section class="panel" id="today-panel">
+        <header class="section-header">
+          <div>
+            <h2>Today</h2>
+            <p>Your entries for the current day live here.</p>
+          </div>
+          <div class="section-actions">
+            <button id="add-entry-btn" class="primary-btn">Add from items</button>
+            <button id="add-item-btn" class="ghost-btn">New item</button>
+          </div>
+        </header>
+        <div id="entries-list" class="entry-list" aria-live="polite">
+          <p class="placeholder">No food items yet. Create or select an item to log it.</p>
+        </div>
+      </section>
+
+      <section class="panel" id="items-panel">
+        <header class="section-header">
+          <div>
+            <h2>Recent items</h2>
+            <p>Reusable foods with optional label images.</p>
+          </div>
+        </header>
+        <div id="items-list" class="item-list" aria-live="polite"></div>
+      </section>
+    </div>
+
+    <dialog id="item-dialog">
+      <form method="dialog" id="item-form" class="dialog-card">
+        <header>
+          <h3 id="item-dialog-title">Add food item</h3>
+          <button type="button" class="ghost-btn" data-close>&times;</button>
+        </header>
+        <div class="field-column">
+          <label>Item name<input type="text" name="name" required /></label>
+          <label>Serving mass (grams)<input type="number" name="base_grams" min="1" step="0.1" required /></label>
+          <label>Calories per serving<input type="number" name="calories" min="0" step="1" required /></label>
+          <label>Protein (g)<input type="number" name="protein" min="0" step="0.1" /></label>
+          <label>Fat (g)<input type="number" name="fat" min="0" step="0.1" /></label>
+          <label>Carbs (g)<input type="number" name="carbs" min="0" step="0.1" /></label>
+          <label>Fiber (g)<input type="number" name="fiber" min="0" step="0.1" /></label>
+          <label class="file-picker">Nutrition label image (optional)
+            <input type="file" name="image" accept="image/*" />
+          </label>
+          <figure class="image-preview" hidden>
+            <img alt="Nutrition label preview" />
+            <figcaption>Embedded & cached offline</figcaption>
+          </figure>
+        </div>
+        <menu>
+          <button type="button" value="cancel" class="ghost-btn" data-close>Cancel</button>
+          <button type="submit" class="primary-btn">Save item</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="entry-dialog">
+      <form method="dialog" id="entry-form" class="dialog-card">
+        <header>
+          <h3>Log item</h3>
+          <button type="button" class="ghost-btn" data-close>&times;</button>
+        </header>
+        <label>Choose item
+          <select name="item_id" required></select>
+        </label>
+        <label>Grams consumed
+          <input type="number" name="grams" min="1" step="1" required />
+        </label>
+        <menu>
+          <button type="button" class="ghost-btn" data-close>Cancel</button>
+          <button type="submit" class="primary-btn">Add entry</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <div id="toast" role="status" aria-live="polite" hidden></div>
+  </body>
+</html>
