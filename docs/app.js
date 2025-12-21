@@ -524,13 +524,7 @@ function bootstrapOcr() {
       const worker = await window.Tesseract.createWorker({
         workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js',
         corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.0.4/tesseract-core.wasm.js',
-        langPath: 'https://tessdata.projectnaptha.com/4.0.0_best',
-        logger: (m) => {
-          if (m.status === 'recognizing text') {
-            toastEl.textContent = `Scanning label… ${Math.round((m.progress || 0) * 100)}%`;
-            toastEl.hidden = false;
-          }
-        }
+        langPath: 'https://tessdata.projectnaptha.com/4.0.0_best'
       });
       await worker.loadLanguage('eng');
       await worker.initialize('eng');
@@ -768,9 +762,9 @@ async function runLabelOcr(file) {
     showToast('OCR not ready. Try again in a moment.');
     return;
   }
-  toastEl.textContent = 'Scanning label…';
-  toastEl.hidden = false;
   try {
+    toastEl.textContent = 'Scanning label…';
+    toastEl.hidden = false;
     const { data } = await worker.recognize(file);
     const parsed = parseLabelText(data?.text || '');
     autoFillItemForm(parsed);
