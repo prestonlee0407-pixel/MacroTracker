@@ -1,6 +1,6 @@
 {
-  "name": "Calorie Tracker",
-  "short_name": "Calories",
+  "name": "Macro Tracker",
+  "short_name": "Macros",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#f5f6fb",
