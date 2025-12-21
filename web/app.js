@@ -25,6 +25,7 @@ let pyodideInstance;
 const pythonApi = {};
 let deferredInstall;
 let ocrWorker;
+let ocrWorkerReady;
 
 const settingsForm = document.getElementById('settings-form');
 const statsContainer = document.getElementById('stats-cards');
@@ -519,13 +520,25 @@ async function bootstrapPyodide() {
 
 function bootstrapOcr() {
   if (window.Tesseract) {
-    ocrWorker = window.Tesseract.createWorker({
-      logger: (m) => {
-        if (m.status === 'recognizing text') {
-          toastEl.textContent = `Scanning label… ${Math.round(m.progress * 100)}%`;
-          toastEl.hidden = false;
+    ocrWorkerReady = (async () => {
+      const worker = await window.Tesseract.createWorker({
+        workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js',
+        corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.0.4/tesseract-core.wasm.js',
+        langPath: 'https://tessdata.projectnaptha.com/4.0.0_best',
+        logger: (m) => {
+          if (m.status === 'recognizing text') {
+            toastEl.textContent = `Scanning label… ${Math.round((m.progress || 0) * 100)}%`;
+            toastEl.hidden = false;
+          }
         }
-      }
+      });
+      await worker.loadLanguage('eng');
+      await worker.initialize('eng');
+      ocrWorker = worker;
+      return worker;
+    })().catch((err) => {
+      console.warn('OCR init failed', err);
+      ocrWorkerReady = null;
     });
   }
 }
@@ -746,17 +759,19 @@ async function registerServiceWorker() {
 }
 
 async function runLabelOcr(file) {
-  if (!ocrWorker) {
+  if (!ocrWorkerReady) {
+    showToast('OCR not ready. Try again in a moment.');
+    return;
+  }
+  const worker = await ocrWorkerReady.catch(() => null);
+  if (!worker) {
     showToast('OCR not ready. Try again in a moment.');
     return;
   }
   toastEl.textContent = 'Scanning label…';
   toastEl.hidden = false;
   try {
-    await ocrWorker.load();
-    await ocrWorker.loadLanguage('eng');
-    await ocrWorker.initialize('eng');
-    const { data } = await ocrWorker.recognize(file);
+    const { data } = await worker.recognize(file);
     const parsed = parseLabelText(data?.text || '');
     autoFillItemForm(parsed);
     showToast('Label scanned');
