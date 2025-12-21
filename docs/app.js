@@ -523,8 +523,7 @@ function bootstrapOcr() {
   ocrWorkerReady = (async () => {
     const worker = await window.Tesseract.createWorker({
       workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js',
-      corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.0.4/tesseract-core.wasm.js',
-      langPath: 'https://tessdata.projectnaptha.com/4.0.0_best'
+      corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.0.4/tesseract-core.wasm.js'
     });
     await worker.loadLanguage('eng');
     await worker.initialize('eng');
