@@ -416,7 +416,6 @@ async function renderItems() {
         </div>
       </header>
       <p>${item.macros.calories.toFixed(0)} kcal per ${item.base_grams.toFixed(0)} g</p>
-      ${item.imageData ? `<img src="${item.imageData}" alt="${item.name} label" />` : ''}
       <footer>
         <span>Protein ${item.macros.protein.toFixed(1)} g</span>
         <span>Fat ${item.macros.fat.toFixed(1)} g</span>
