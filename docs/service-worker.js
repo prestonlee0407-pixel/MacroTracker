@@ -1,4 +1,4 @@
-const CACHE_NAME = 'calorie-tracker-cache-v3';
+const CACHE_NAME = 'calorie-tracker-cache-v4';
 const CORE_ASSETS = [
   './',
   'index.html',
