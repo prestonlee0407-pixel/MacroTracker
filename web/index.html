@@ -9,6 +9,7 @@
     <link rel="icon" href="icons/icon-192.png" sizes="192x192" />
     <link rel="apple-touch-icon" href="icons/icon-192.png" />
     <link rel="stylesheet" href="styles.css" />
+    <script defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.4/dist/tesseract.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
     <script defer type="module" src="app.js"></script>
   </head>
@@ -111,6 +112,20 @@
         <div id="items-list" class="item-list" aria-live="polite"></div>
       </section>
     </div>
+
+    <dialog id="add-choice-dialog">
+      <div class="dialog-card">
+        <header>
+          <h3>Add food</h3>
+          <button type="button" class="ghost-btn" data-close>&times;</button>
+        </header>
+        <p>Choose how you want to add the item:</p>
+        <div class="choice-buttons">
+          <button class="primary-btn" data-mode="label">Nutrition label</button>
+          <button class="ghost-btn" data-mode="manual">Manual entry</button>
+        </div>
+      </div>
+    </dialog>
 
     <dialog id="item-dialog">
       <form method="dialog" id="item-form" class="dialog-card">

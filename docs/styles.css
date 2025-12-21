@@ -288,6 +288,12 @@ button {
   padding: 0;
 }
 
+.choice-buttons {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
 .file-picker input {
   padding: 0.4rem;
 }

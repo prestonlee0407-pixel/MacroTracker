@@ -24,6 +24,7 @@ let pyodideReady;
 let pyodideInstance;
 const pythonApi = {};
 let deferredInstall;
+let ocrWorker;
 
 const settingsForm = document.getElementById('settings-form');
 const statsContainer = document.getElementById('stats-cards');
@@ -34,6 +35,7 @@ const entryDialog = document.getElementById('entry-dialog');
 const itemForm = document.getElementById('item-form');
 const entryForm = document.getElementById('entry-form');
 const toastEl = document.getElementById('toast');
+const addChoiceDialog = document.getElementById('add-choice-dialog');
 
 init();
 
@@ -46,6 +48,7 @@ async function init() {
   setupDialogs();
   setupActions();
   pyodideReady = bootstrapPyodide();
+  bootstrapOcr();
   await loadSettings();
   renderSettingsForm();
   await pyodideReady;
@@ -90,6 +93,20 @@ function setupDialogs() {
       dialog?.close();
     });
   });
+
+  if (addChoiceDialog) {
+    addChoiceDialog.addEventListener('click', (event) => {
+      const modeBtn = event.target.closest('button[data-mode]');
+      if (!modeBtn) return;
+      const mode = modeBtn.dataset.mode;
+      addChoiceDialog.close();
+      if (mode === 'label') {
+        openItemDialog(undefined, { mode: 'label' });
+      } else {
+        openItemDialog();
+      }
+    });
+  }
 
   itemForm.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -144,6 +161,9 @@ function setupDialogs() {
       const dataUrl = await fileToDataUrl(imageInput.files[0]);
       itemForm.dataset.imageData = dataUrl;
       updateImagePreview(dataUrl);
+      if (itemForm.dataset.mode === 'label') {
+        await runLabelOcr(imageInput.files[0]);
+      }
     }
   });
 
@@ -165,7 +185,12 @@ function setupDialogs() {
 }
 
 function setupActions() {
-  document.getElementById('add-item-btn').addEventListener('click', () => openItemDialog());
+  const addItemBtn = document.getElementById('add-item-btn');
+  if (addChoiceDialog) {
+    addItemBtn.addEventListener('click', () => addChoiceDialog.showModal());
+  } else {
+    addItemBtn.addEventListener('click', () => openItemDialog());
+  }
   document.getElementById('add-entry-btn').addEventListener('click', openEntryDialog);
 
   document.getElementById('toggle-settings').addEventListener('click', () => {
@@ -253,7 +278,7 @@ async function openEntryDialog(prefillItemId) {
   entryDialog.showModal();
 }
 
-async function openItemDialog(item) {
+async function openItemDialog(item, options = {}) {
   resetItemForm();
   if (item) {
     itemForm.dataset.editingId = item.id;
@@ -273,6 +298,12 @@ async function openItemDialog(item) {
   } else {
     document.getElementById('item-dialog-title').textContent = 'Add food item';
   }
+  if (options.mode === 'label') {
+    document.getElementById('item-dialog-title').textContent = 'Add from nutrition label';
+    itemForm.dataset.mode = 'label';
+    const imageInput = itemForm.querySelector('input[name="image"]');
+    imageInput?.focus();
+  }
   itemDialog.showModal();
 }
 
@@ -281,6 +312,7 @@ function resetItemForm() {
   delete itemForm.dataset.editingId;
   delete itemForm.dataset.createdAt;
   delete itemForm.dataset.imageData;
+  delete itemForm.dataset.mode;
   updateImagePreview(null);
 }
 
@@ -439,8 +471,14 @@ async function refreshStats() {
   }));
 
   const settingsPayload = { ...settingsState };
-  const goalsResult = pythonCall('calculate_goals', settingsPayload);
-  const totalsResult = pythonCall('calculate_consumed_totals', entryPayload);
+  let goalsResult = pythonCall('calculate_goals', settingsPayload);
+  let totalsResult = pythonCall('calculate_consumed_totals', entryPayload);
+  if (!goalsResult || Object.keys(goalsResult).length === 0) {
+    goalsResult = calculateGoalsFallback(settingsPayload);
+  }
+  if (!totalsResult || Object.keys(totalsResult).length === 0) {
+    totalsResult = calculateConsumedTotalsFallback(entryPayload);
+  }
 
   STAT_FIELDS.forEach(({ key }) => {
     const consumed = totalsResult[key] || 0;
@@ -455,16 +493,18 @@ async function refreshStats() {
 function pythonCall(fnName, payload) {
   const fn = pythonApi[fnName];
   if (!fn) return {};
-  const pyPayload = pyodideInstance.toPy(payload);
+  let pyPayload;
   try {
+    pyPayload = pyodideInstance.toPy(payload);
     const pyResult = fn(pyPayload);
-    try {
-      return pyResult.toJs({ create_proxies: false });
-    } finally {
-      pyResult.destroy();
-    }
+    const result = pyResult.toJs({ create_proxies: false });
+    pyResult.destroy();
+    return result;
+  } catch (error) {
+    console.warn('Python call failed', error);
+    return {};
   } finally {
-    pyPayload.destroy();
+    if (pyPayload) pyPayload.destroy();
   }
 }
 
@@ -475,6 +515,19 @@ async function bootstrapPyodide() {
   await pyodideInstance.runPythonAsync(code);
   pythonApi.calculate_goals = pyodideInstance.globals.get('calculate_goals');
   pythonApi.calculate_consumed_totals = pyodideInstance.globals.get('calculate_consumed_totals');
+}
+
+function bootstrapOcr() {
+  if (window.Tesseract) {
+    ocrWorker = window.Tesseract.createWorker({
+      logger: (m) => {
+        if (m.status === 'recognizing text') {
+          toastEl.textContent = `Scanning label… ${Math.round(m.progress * 100)}%`;
+          toastEl.hidden = false;
+        }
+      }
+    });
+  }
 }
 
 function openDatabase() {
@@ -632,6 +685,47 @@ function showToast(message) {
   }, 2500);
 }
 
+function calculateGoalsFallback(settings) {
+  const data = {
+    body_weight: 0,
+    weight_unit: 'lbs',
+    maintenance_calories: 0,
+    caloric_adjustment: 0,
+    macro_ratio_unit: 'kg',
+    protein_per_unit: 1.8,
+    fat_per_unit: 0.6,
+    fiber_goal: 25,
+    ...(settings || {})
+  };
+  const safe = (v, d = 0) => (v === null || v === undefined || Number.isNaN(Number(v)) ? d : Number(v));
+  const toKg = (value, unit) => (unit === 'lbs' ? safe(value) / 2.20462 : safe(value));
+  const ratioPerKg = (value, unit) => (unit === 'lbs' ? safe(value) * 2.20462 : safe(value));
+
+  const weightKg = toKg(data.body_weight, data.weight_unit);
+  const maintenance = safe(data.maintenance_calories);
+  const adjustment = safe(data.caloric_adjustment);
+  const calories = Math.max(0, maintenance + adjustment);
+  const protein = weightKg * ratioPerKg(data.protein_per_unit, data.macro_ratio_unit);
+  const fat = weightKg * ratioPerKg(data.fat_per_unit, data.macro_ratio_unit);
+  const fiber = safe(data.fiber_goal, 25);
+
+  return { calories, protein, fat, fiber, carbs: 0 };
+}
+
+function calculateConsumedTotalsFallback(entries) {
+  const totals = { calories: 0, protein: 0, fat: 0, fiber: 0, carbs: 0 };
+  if (!entries) return totals;
+  entries.forEach((entry) => {
+    const grams = Number(entry.grams) || 0;
+    if (grams <= 0) return;
+    const per = entry.per_gram || {};
+    Object.keys(totals).forEach((key) => {
+      totals[key] += (Number(per[key]) || 0) * grams;
+    });
+  });
+  return totals;
+}
+
 function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -649,4 +743,62 @@ async function registerServiceWorker() {
       console.warn('Service worker registration failed', error);
     }
   }
+}
+
+async function runLabelOcr(file) {
+  if (!ocrWorker) {
+    showToast('OCR not ready. Try again in a moment.');
+    return;
+  }
+  toastEl.textContent = 'Scanning label…';
+  toastEl.hidden = false;
+  try {
+    await ocrWorker.load();
+    await ocrWorker.loadLanguage('eng');
+    await ocrWorker.initialize('eng');
+    const { data } = await ocrWorker.recognize(file);
+    const parsed = parseLabelText(data?.text || '');
+    autoFillItemForm(parsed);
+    showToast('Label scanned');
+  } catch (error) {
+    console.warn('OCR failed', error);
+    showToast('Could not read that label');
+  } finally {
+    setTimeout(() => (toastEl.hidden = true), 1500);
+  }
+}
+
+function parseLabelText(text) {
+  const normalized = text.toLowerCase().replace(/\|/g, 'l');
+  const extract = (patterns) => {
+    for (const pattern of patterns) {
+      const match = normalized.match(pattern);
+      if (match) return Number(match[1]);
+    }
+    return 0;
+  };
+  const serving = extract([/(\d+(?:\.\d+)?)\s*(g|grams?)/]);
+  const calories = extract([/calories[^\d]*(\d+)/, /(\d+)\s*kcal/]);
+  const protein = extract([/protein[^\d]*(\d+(?:\.\d+)?)/]);
+  const fat = extract([/total\s*fat[^\d]*(\d+(?:\.\d+)?)/, /fat[^\d]*(\d+(?:\.\d+)?)/]);
+  const carbs = extract([/total\s*carb[^\d]*(\d+(?:\.\d+)?)/, /carbohydrate[^\d]*(\d+(?:\.\d+)?)/]);
+  const fiber = extract([/dietary\s*fiber[^\d]*(\d+(?:\.\d+)?)/, /fiber[^\d]*(\d+(?:\.\d+)?)/]);
+  return {
+    serving,
+    calories,
+    protein,
+    fat,
+    carbs,
+    fiber
+  };
+}
+
+function autoFillItemForm(parsed) {
+  if (!parsed) return;
+  if (parsed.serving) itemForm.base_grams.value = parsed.serving;
+  if (parsed.calories) itemForm.calories.value = parsed.calories;
+  if (parsed.protein) itemForm.protein.value = parsed.protein;
+  if (parsed.fat) itemForm.fat.value = parsed.fat;
+  if (parsed.carbs) itemForm.carbs.value = parsed.carbs;
+  if (parsed.fiber) itemForm.fiber.value = parsed.fiber;
 }
