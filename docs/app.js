@@ -748,14 +748,22 @@ async function runLabelOcr(file) {
   try {
     toastEl.textContent = 'Scanning label…';
     toastEl.hidden = false;
-    const { data } = await window.Tesseract.recognize(file, 'eng', {
-      logger: (m) => {
-        if (m.status === 'recognizing text' && m.progress) {
-          toastEl.textContent = `Scanning label… ${Math.round(m.progress * 100)}%`;
+    const prepped = await preprocessImage(file);
+    const passes = [6, 11];
+    const results = [];
+    for (const psm of passes) {
+      const { data } = await window.Tesseract.recognize(prepped, 'eng', {
+        tessedit_pageseg_mode: psm,
+        logger: (m) => {
+          if (m.status === 'recognizing text' && m.progress) {
+            toastEl.textContent = `Scanning label… ${Math.round(m.progress * 100)}% (psm ${psm})`;
+          }
         }
-      }
-    });
-    const parsed = parseLabelText(data?.text || '');
+      });
+      results.push({ psm, text: data?.text || '' });
+    }
+    const best = pickBestOcr(results);
+    const parsed = parseLabelText(best.text || '');
     autoFillItemForm(parsed);
     showToast('Label scanned');
   } catch (error) {
@@ -799,4 +807,44 @@ function autoFillItemForm(parsed) {
   if (parsed.fat) itemForm.fat.value = parsed.fat;
   if (parsed.carbs) itemForm.carbs.value = parsed.carbs;
   if (parsed.fiber) itemForm.fiber.value = parsed.fiber;
+}
+
+async function preprocessImage(file) {
+  const bitmap = await createImageBitmap(file);
+  const minSize = 1100;
+  const scale = Math.max(1, Math.max(minSize / bitmap.width, minSize / bitmap.height));
+  const width = Math.round(bitmap.width * scale);
+  const height = Math.round(bitmap.height * scale);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(bitmap, 0, 0, width, height);
+
+  const imageData = ctx.getImageData(0, 0, width, height);
+  const data = imageData.data;
+  const contrast = 1.3;
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i], g = data[i + 1], b = data[i + 2];
+    let v = 0.299 * r + 0.587 * g + 0.114 * b;
+    v = (v - 128) * contrast + 128;
+    v = Math.max(0, Math.min(255, v));
+    data[i] = data[i + 1] = data[i + 2] = v;
+  }
+  ctx.putImageData(imageData, 0, 0);
+  return canvas.toDataURL('image/png');
+}
+
+function pickBestOcr(results) {
+  if (!results?.length) return { text: '' };
+  const scoreText = (text) => {
+    const nums = text.match(/\d+(?:\.\d+)?/g);
+    return nums ? nums.length : 0;
+  };
+  return results.reduce((best, current) => {
+    const cScore = scoreText(current.text);
+    const bScore = scoreText(best.text || '');
+    return cScore > bScore ? current : best;
+  });
 }
