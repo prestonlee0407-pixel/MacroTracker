@@ -24,8 +24,7 @@ let pyodideReady;
 let pyodideInstance;
 const pythonApi = {};
 let deferredInstall;
-let ocrWorker;
-let ocrWorkerReady;
+let ocrReady;
 const ocrProgressRow = document.querySelector('.progress-row');
 const ocrProgressBar = ocrProgressRow?.querySelector('.progress-bar span');
 const ocrProgressText = ocrProgressRow?.querySelector('.progress-text');
@@ -744,36 +743,26 @@ async function registerServiceWorker() {
 }
 
 async function runLabelOcr(file) {
-  if (!window.Tesseract) {
+  if (!window.ocr || !window.ocr.init) {
     showToast('OCR not ready. Try again in a moment.');
     return;
   }
   try {
-    setOcrProgress(0, 'Preparing image…');
-    const prepped = await preprocessImage(file);
-    const inverted = await preprocessImage(file, true);
-    const inputs = [prepped, inverted];
-    const passes = [6, 7, 11, 13];
-    const results = [];
-    let attempt = 0;
-    for (const img of inputs) {
-      for (const psm of passes) {
-        attempt += 1;
-        const { data } = await window.Tesseract.recognize(img, 'eng', {
-          tessedit_pageseg_mode: psm,
-          tessedit_char_whitelist: '0123456789.kcalkjgbrmspfatcarbohydratefiberprotein',
-          oem: 1,
-          logger: (m) => {
-            if (m.status === 'recognizing text' && m.progress) {
-              setOcrProgress(Math.round(m.progress * 100), `Scanning (psm ${psm}, attempt ${attempt})`);
-            }
-          }
-        });
-        results.push({ psm, text: data?.text || '' });
-      }
+    setOcrProgress(0, 'Loading OCR model…');
+    if (!ocrReady) {
+      ocrReady = window.ocr.init();
+      await ocrReady;
+    } else {
+      await ocrReady;
     }
-    const best = pickBestOcr(results);
-    const parsed = parseLabelText(best.text || '');
+    setOcrProgress(10, 'Preparing image…');
+    const prepped = await preprocessImage(file);
+    setOcrProgress(20, 'Scanning…');
+    const result = await window.ocr.recognize(prepped);
+    const text = Array.isArray(result?.texts)
+      ? result.texts.map((t) => (t.text || '')).join('\n')
+      : (result?.text || '');
+    const parsed = parseLabelText(text || '');
     if (isParsedEmpty(parsed)) {
       showToast('Could not find numbers. Please try a clearer photo or enter manually.');
     } else {
