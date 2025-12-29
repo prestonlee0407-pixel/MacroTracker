@@ -762,6 +762,7 @@ async function runLabelOcr(file) {
         const { data } = await window.Tesseract.recognize(img, 'eng', {
           tessedit_pageseg_mode: psm,
           tessedit_char_whitelist: '0123456789.kcalkjgbrmspfatcarbohydratefiberprotein',
+          oem: 1,
           logger: (m) => {
             if (m.status === 'recognizing text' && m.progress) {
               setOcrProgress(Math.round(m.progress * 100), `Scanning (psm ${psm}, attempt ${attempt})`);
