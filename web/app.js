@@ -749,11 +749,12 @@ async function runLabelOcr(file) {
     toastEl.textContent = 'Scanning label…';
     toastEl.hidden = false;
     const prepped = await preprocessImage(file);
-    const passes = [6, 11];
+    const passes = [6, 7, 11, 13];
     const results = [];
     for (const psm of passes) {
       const { data } = await window.Tesseract.recognize(prepped, 'eng', {
         tessedit_pageseg_mode: psm,
+        tessedit_char_whitelist: '0123456789.kcalkjgbrmspfatcarbohydratefiberprotein',
         logger: (m) => {
           if (m.status === 'recognizing text' && m.progress) {
             toastEl.textContent = `Scanning label… ${Math.round(m.progress * 100)}% (psm ${psm})`;
@@ -830,7 +831,9 @@ async function preprocessImage(file) {
     let v = 0.299 * r + 0.587 * g + 0.114 * b;
     v = (v - 128) * contrast + 128;
     v = Math.max(0, Math.min(255, v));
-    data[i] = data[i + 1] = data[i + 2] = v;
+    // Simple threshold to binarize
+    const binary = v > 180 ? 255 : 0;
+    data[i] = data[i + 1] = data[i + 2] = binary;
   }
   ctx.putImageData(imageData, 0, 0);
   return canvas.toDataURL('image/png');
