@@ -26,6 +26,9 @@ const pythonApi = {};
 let deferredInstall;
 let ocrWorker;
 let ocrWorkerReady;
+const ocrProgressRow = document.querySelector('.progress-row');
+const ocrProgressBar = ocrProgressRow?.querySelector('.progress-bar span');
+const ocrProgressText = ocrProgressRow?.querySelector('.progress-text');
 
 const settingsForm = document.getElementById('settings-form');
 const statsContainer = document.getElementById('stats-cards');
@@ -759,6 +762,7 @@ async function runLabelOcr(file) {
         const { data } = await window.Tesseract.recognize(img, 'eng', {
           tessedit_pageseg_mode: psm,
           tessedit_char_whitelist: '0123456789.kcalkjgbrmspfatcarbohydratefiberprotein',
+          oem: 1,
           logger: (m) => {
             if (m.status === 'recognizing text' && m.progress) {
               setOcrProgress(Math.round(m.progress * 100), `Scanning (psm ${psm}, attempt ${attempt})`);
@@ -770,8 +774,12 @@ async function runLabelOcr(file) {
     }
     const best = pickBestOcr(results);
     const parsed = parseLabelText(best.text || '');
-    autoFillItemForm(parsed);
-    showToast('Label scanned');
+    if (isParsedEmpty(parsed)) {
+      showToast('Could not find numbers. Please try a clearer photo or enter manually.');
+    } else {
+      autoFillItemForm(parsed);
+      showToast('Label scanned');
+    }
   } catch (error) {
     console.warn('OCR failed', error);
     showToast('Could not read that label');
@@ -867,4 +875,9 @@ function setOcrProgress(percent, text) {
   ocrProgressRow.hidden = false;
   if (ocrProgressBar) ocrProgressBar.style.width = `${Math.min(Math.max(percent, 0), 100)}%`;
   if (ocrProgressText && text) ocrProgressText.textContent = text;
+}
+
+function isParsedEmpty(parsed) {
+  if (!parsed) return true;
+  return !parsed.serving && !parsed.calories && !parsed.protein && !parsed.fat && !parsed.carbs && !parsed.fiber;
 }
