@@ -746,22 +746,27 @@ async function runLabelOcr(file) {
     return;
   }
   try {
-    toastEl.textContent = 'Scanning label…';
-    toastEl.hidden = false;
+    setOcrProgress(0, 'Preparing image…');
     const prepped = await preprocessImage(file);
+    const inverted = await preprocessImage(file, true);
+    const inputs = [prepped, inverted];
     const passes = [6, 7, 11, 13];
     const results = [];
-    for (const psm of passes) {
-      const { data } = await window.Tesseract.recognize(prepped, 'eng', {
-        tessedit_pageseg_mode: psm,
-        tessedit_char_whitelist: '0123456789.kcalkjgbrmspfatcarbohydratefiberprotein',
-        logger: (m) => {
-          if (m.status === 'recognizing text' && m.progress) {
-            toastEl.textContent = `Scanning label… ${Math.round(m.progress * 100)}% (psm ${psm})`;
+    let attempt = 0;
+    for (const img of inputs) {
+      for (const psm of passes) {
+        attempt += 1;
+        const { data } = await window.Tesseract.recognize(img, 'eng', {
+          tessedit_pageseg_mode: psm,
+          tessedit_char_whitelist: '0123456789.kcalkjgbrmspfatcarbohydratefiberprotein',
+          logger: (m) => {
+            if (m.status === 'recognizing text' && m.progress) {
+              setOcrProgress(Math.round(m.progress * 100), `Scanning (psm ${psm}, attempt ${attempt})`);
+            }
           }
-        }
-      });
-      results.push({ psm, text: data?.text || '' });
+        });
+        results.push({ psm, text: data?.text || '' });
+      }
     }
     const best = pickBestOcr(results);
     const parsed = parseLabelText(best.text || '');
@@ -771,6 +776,7 @@ async function runLabelOcr(file) {
     console.warn('OCR failed', error);
     showToast('Could not read that label');
   } finally {
+    setOcrProgress(null, null);
     setTimeout(() => (toastEl.hidden = true), 1500);
   }
 }
@@ -810,9 +816,9 @@ function autoFillItemForm(parsed) {
   if (parsed.fiber) itemForm.fiber.value = parsed.fiber;
 }
 
-async function preprocessImage(file) {
+async function preprocessImage(file, invert = false) {
   const bitmap = await createImageBitmap(file);
-  const minSize = 1100;
+  const minSize = 1600;
   const scale = Math.max(1, Math.max(minSize / bitmap.width, minSize / bitmap.height));
   const width = Math.round(bitmap.width * scale);
   const height = Math.round(bitmap.height * scale);
@@ -825,15 +831,15 @@ async function preprocessImage(file) {
 
   const imageData = ctx.getImageData(0, 0, width, height);
   const data = imageData.data;
-  const contrast = 1.3;
+  const contrast = 1.4;
   for (let i = 0; i < data.length; i += 4) {
     const r = data[i], g = data[i + 1], b = data[i + 2];
     let v = 0.299 * r + 0.587 * g + 0.114 * b;
     v = (v - 128) * contrast + 128;
     v = Math.max(0, Math.min(255, v));
-    // Simple threshold to binarize
-    const binary = v > 180 ? 255 : 0;
-    data[i] = data[i + 1] = data[i + 2] = binary;
+    const binary = v > 170 ? 255 : 0;
+    const finalVal = invert ? 255 - binary : binary;
+    data[i] = data[i + 1] = data[i + 2] = finalVal;
   }
   ctx.putImageData(imageData, 0, 0);
   return canvas.toDataURL('image/png');
@@ -850,4 +856,15 @@ function pickBestOcr(results) {
     const bScore = scoreText(best.text || '');
     return cScore > bScore ? current : best;
   });
+}
+
+function setOcrProgress(percent, text) {
+  if (!ocrProgressRow) return;
+  if (percent === null) {
+    ocrProgressRow.hidden = true;
+    return;
+  }
+  ocrProgressRow.hidden = false;
+  if (ocrProgressBar) ocrProgressBar.style.width = `${Math.min(Math.max(percent, 0), 100)}%`;
+  if (ocrProgressText && text) ocrProgressText.textContent = text;
 }
