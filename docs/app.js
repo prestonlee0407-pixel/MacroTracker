@@ -744,17 +744,15 @@ async function registerServiceWorker() {
 
 async function runLabelOcr(file) {
   if (!window.ocr || !window.ocr.init) {
-    showToast('OCR not ready. Try again in a moment.');
+    showToast('OCR library failed to load. Please refresh or check your network.');
     return;
   }
   try {
     setOcrProgress(0, 'Loading OCR model…');
     if (!ocrReady) {
       ocrReady = window.ocr.init();
-      await ocrReady;
-    } else {
-      await ocrReady;
     }
+    await ocrReady;
     setOcrProgress(10, 'Preparing image…');
     const prepped = await preprocessImage(file);
     setOcrProgress(20, 'Scanning…');
